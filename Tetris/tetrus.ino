@@ -13,9 +13,6 @@
 #define BTND 3
 
 #define LED 2
-#define BUZZ 9
-
-#define GAMERATE 1000
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, 4);
 
@@ -68,12 +65,14 @@ byte board[200];
 
 unsigned long game_update;
 
-int lines[5];
-int linesCount = 0;
-
 bool redraw = false;
 bool lock = false;
 bool gameOver = false;
+
+int score = 0;
+
+int lines[4];
+int linesCount = 0;
 
 int currentPiece = 0;
 int currentRotation = 0;
@@ -88,7 +87,6 @@ void setup() {
   pinMode(SPDC, INPUT);
 
   pinMode(LED, OUTPUT);
-  pinMode(BUZZ, OUTPUT);
 
   randomSeed(analogRead(A0));
 
@@ -108,7 +106,6 @@ void setup() {
 }
 
 void loop() {
-
   while (!gameOver)
   {
     unsigned long currMil = millis();
@@ -127,7 +124,7 @@ void loop() {
       }
 
       redraw = true;
-      game_update += GAMERATE;
+      game_update += getRate();
     }
 
     if (lock)
@@ -145,29 +142,67 @@ void loop() {
       }
 
       //check lines
-      for (int y = 0; y < boardHeight; y++)
+      for (int py = 0; py < 4; py++)
       {
-        int countP = 0;
-
-        for (int x = 0; x < boardWidth; x++)
+        if (currentY + py < boardHeight - 1)
         {
-          if (board[y * boardWidth + x] == 1)
+          bool isLine = true;
+
+          for (int px = 1; px < boardWidth - 1; px++)
           {
-            countP++;
+            isLine &= (board[(currentY + py) * boardWidth + px]) != 0;
+          }
+
+          if (isLine)
+          {
+            for (int px = 1; px < boardWidth - 1; px++)
+            {
+              board[(currentY + py) * boardWidth + px] = 2;
+            }
+
+            lines[linesCount] = currentY + py;
+            linesCount++;
+            score++;
+          }
+        }
+      }
+      if (linesCount > 0)
+      {
+        long mFrom = millis();
+
+        display.clearDisplay();
+        drawBoard();
+        display.setRotation(3);
+        display.setCursor(2, 0);
+        display.print(score);
+        display.setRotation(0);
+        display.display();
+        
+        digitalWrite(LED, HIGH);      
+        delay(200);
+        digitalWrite(LED, LOW);
+
+        for (int i = 0; i < linesCount; i++)
+        {
+          for (int px = 1; px < boardWidth - 1; px++)
+          {
+            for (int py = lines[i]; py > -1; py--)
+            {
+              board[py * boardWidth + px] = board[(py - 1) * boardWidth + px];
+            }
+
+            board[px] = 0;
           }
         }
 
-        if (countP >= 8)
-        {
-          lines[linesCount] = y;
-          linesCount++;
-        }
+        linesCount = 0;
+        game_update += (millis() - mFrom);
       }
 
       //next piece
       currentPiece = random(0, 7);
       currentX = boardWidth / 2 - 1;
-      currentY = -3;
+      currentY = -2;
       currentRotation = 0;
 
       //game over check
@@ -184,6 +219,12 @@ void loop() {
       display.clearDisplay();
       drawBoard();
       drawPiece();
+
+      display.setRotation(3);
+      display.setCursor(2, 0);
+      display.print(score);
+      display.setRotation(0);
+
       display.display();
 
       redraw = false;
@@ -207,13 +248,14 @@ void loop() {
 
 void restart()
 {
+  score = 0;
   initBoard();
-  currentPiece = 0;
+  currentPiece = random(0, 7);;
   currentRotation = 0;
   currentX = boardWidth / 2 - 1;
-  currentY = -3;
+  currentY = -2;
   gameOver = false;
-  game_update = millis() + GAMERATE;
+  game_update = millis() + getRate();
 }
 
 void readControls()
@@ -310,6 +352,11 @@ void drawBoard()
       {
         display.fillRect(8 + y * 6, SCREEN_HEIGHT - 8 - 6 * x, 6, 6, SSD1306_WHITE);
       }
+
+      if (cell == 2)
+      {
+        display.drawRect(8 + y * 6, SCREEN_HEIGHT - 8 - 6 * x, 6, 6, SSD1306_WHITE);
+      }
     }
   }
 }
@@ -343,4 +390,8 @@ bool readBtn(int btnP, int &btn_prev)
   }
 
   return false;
+}
+
+int getRate() {
+  return map(analogRead(SPDC), 0, 1023, 100, 1500);
 }
