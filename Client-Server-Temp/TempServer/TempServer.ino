@@ -5,6 +5,8 @@
 
 #define LEDIN 5
 #define LEDOUT 6
+#define LIGHTSENS A1
+
 #define DHTPIN 3
 #define DHTTYPE DHT11
 
@@ -19,11 +21,13 @@ const char conMessage[] = "Welcome";
 struct DataModel {
   int hum = 0;
   float temp = 0;
+  int light = 0;
 };
 
 DataModel model;
 
 void setup() {
+  pinMode(LIGHTSENS, INPUT);
   pinMode(LEDIN, OUTPUT);
   pinMode(LEDOUT, OUTPUT);
 
@@ -61,6 +65,7 @@ void sendTemp()
 {
   model.hum = dht.readHumidity();
   model.temp = dht.readTemperature();
+  model.light = map(analogRead(LIGHTSENS), 0, 1000, 0, 10);
 
   radio.stopListening();
   digitalWrite(LEDOUT, HIGH);
@@ -69,7 +74,7 @@ void sendTemp()
 }
 
 void checkCon()
-{ 
+{
   radio.stopListening();
   digitalWrite(LEDOUT, HIGH);
   radio.write(&conMessage, sizeof(conMessage));

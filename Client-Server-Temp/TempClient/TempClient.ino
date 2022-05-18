@@ -28,6 +28,7 @@ bool is_connected = false;
 struct DataModel {
   int hum = 0;
   float temp = 0;
+  int light = 0;
 };
 
 DataModel model;
@@ -181,12 +182,13 @@ void getData()
   if (is_connected)
   {
     lcd.setCursor(0, 0);
-    lcd.print(F(" T:"));
     lcd.print(model.temp);
     lcd.print(F("c "));
-    lcd.print(F("H:"));
     lcd.print(model.hum);
-    lcd.print(F("%   "));
+    lcd.print(F("% "));
+    lcd.print(F("L:"));
+    lcd.print(model.light);
+    lcd.print(F("  "));
   }
   else
   {
