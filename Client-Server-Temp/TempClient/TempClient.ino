@@ -97,7 +97,7 @@ void checkCon()
       }
     }
 
-    if (is_connected && strcmp(returnMessage, "GOT") == 0)
+    if (is_connected && strcmp(returnMessage, "Welcome") == 0)
     {
       digitalWrite(LEDOUT, HIGH);
       digitalWrite(LEDIN, HIGH);
@@ -116,6 +116,10 @@ void checkCon()
       delay(200);
       digitalWrite(LEDOUT, LOW);
       digitalWrite(LEDIN, LOW);
+    }
+    else
+    {
+      is_connected = false;
     }
   }
 }

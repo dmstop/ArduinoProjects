@@ -14,7 +14,7 @@ RF24 radio(10, 9);
 
 const byte addresses[][6] = {"00001", "00002"};
 
-const char conMessage[] = "GOT";
+const char conMessage[] = "Welcome";
 
 struct DataModel {
   int hum = 0;
@@ -43,10 +43,6 @@ void loop() {
   digitalWrite(LEDIN, HIGH);
   radio.read(&request, sizeof(request));
   digitalWrite(LEDIN, LOW);
-
-  char * p = strchr(request, ' ');
-  if (p)
-    *p = 0;
 
   if (strcmp(request, "GetTemp") == 0)
   {
