@@ -55,8 +55,6 @@ void setup() {
   showTime();
 
   checkCon();
-  getData();
-
   next_update = millis() + PERIOD;
 }
 
@@ -147,6 +145,7 @@ void checkCon()
       digitalWrite(LEDOUT, LOW);
       digitalWrite(LEDIN, LOW);
       delay(1000);
+      getData();
     }
     else
     {
@@ -193,7 +192,7 @@ void getData()
   {
     lcd.setCursor(0, 0);
     lcd.print(F(" Disconnect!    "));
-    delay(2000);
+    delay(1000);
     checkCon();
   }
 
