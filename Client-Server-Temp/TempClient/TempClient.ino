@@ -2,6 +2,8 @@
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
+#include <ThreeWire.h>
+#include <RtcDS1302.h>
 
 #define LEDIN 5
 #define LEDOUT 6
@@ -13,6 +15,9 @@ const byte addresses[][6] = {"00001", "00002"};
 
 const char conMessage[] = "CheckCon";
 const char tempMessage[] = "GetTemp";
+
+ThreeWire myWire(A0, A1, A2);
+RtcDS1302<ThreeWire> Rtc(myWire);
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 RF24 radio(9, 10);
@@ -36,17 +41,20 @@ void setup() {
   pinMode(LEDOUT, OUTPUT);
   pinMode(BTN, INPUT);
 
+  Rtc.Begin();
+
   radio.begin();
   radio.openWritingPipe(addresses[0]);
   radio.openReadingPipe(1, addresses[1]);
-  radio.setPALevel(RF24_PA_MIN);
+  radio.setPALevel(RF24_PA_LOW);
 
   lcd.init();
   lcd.clear();
   lcd.backlight();
 
+  showTime();
+
   checkCon();
-  delay(1000);
   getData();
 
   next_update = millis() + PERIOD;
@@ -60,15 +68,36 @@ void loop() {
     getData();
     next_update = currMil + PERIOD;
   }
+
+  showTime();
+}
+
+void showTime()
+{
+  RtcDateTime dt = Rtc.GetDateTime();
+
+  char datestring[20];
+
+  snprintf_P(datestring,
+             sizeof(datestring) / sizeof(datestring[0]),
+             PSTR("%02u/%02u %02u:%02u:%02u"),
+             dt.Day(),
+             dt.Month(),
+             dt.Hour(),
+             dt.Minute(),
+             dt.Second() );
+
+  lcd.setCursor(1, 1);
+
+  lcd.print(datestring);
 }
 
 void checkCon()
 {
   while (!is_connected)
   {
-    lcd.clear();
     lcd.setCursor(0, 0);
-    lcd.print(F("Connecting..."));
+    lcd.print(F(" Connecting...     "));
 
     radio.stopListening();
     digitalWrite(LEDOUT, HIGH);
@@ -81,14 +110,15 @@ void checkCon()
     unsigned long millFrom = millis();
     while (millis() - millFrom < 2000)
     {
+      showTime();
+
       if (radio.available()) {
         digitalWrite(LEDIN, HIGH);
         radio.read(&returnMessage, sizeof(returnMessage));
         digitalWrite(LEDIN, LOW);
         is_connected = true;
-        lcd.clear();
         lcd.setCursor(0, 0);
-        lcd.print(F("Connected!"));
+        lcd.print(F(" Connected!     "));
         break;
       }
       else
@@ -116,6 +146,7 @@ void checkCon()
       delay(200);
       digitalWrite(LEDOUT, LOW);
       digitalWrite(LEDIN, LOW);
+      delay(1000);
     }
     else
     {
@@ -151,24 +182,20 @@ void getData()
   if (is_connected)
   {
     lcd.setCursor(0, 0);
-    lcd.print(F("Temp: "));
+    lcd.print(F(" T:"));
     lcd.print(model.temp);
-    lcd.print(F("c   "));
-
-    lcd.setCursor(0, 1);
-    lcd.print(F("Hum: "));
+    lcd.print(F("c "));
+    lcd.print(F("H:"));
     lcd.print(model.hum);
     lcd.print(F("%   "));
   }
   else
   {
-    lcd.clear();
     lcd.setCursor(0, 0);
-    lcd.print(F("Disconnect!"));
+    lcd.print(F(" Disconnect!    "));
     delay(2000);
-    checkCon();    
+    checkCon();
   }
-
 
   delay(100);
 }

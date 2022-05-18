@@ -31,7 +31,7 @@ void setup() {
   radio.begin();
   radio.openWritingPipe(addresses[1]);
   radio.openReadingPipe(1, addresses[0]);
-  radio.setPALevel(RF24_PA_MIN);
+  radio.setPALevel(RF24_PA_LOW);
 }
 
 void loop() {
