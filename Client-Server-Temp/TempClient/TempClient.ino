@@ -18,6 +18,7 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 RF24 radio(9, 10);
 
 uint8_t btn_prev = LOW;
+bool is_connected = false;
 
 struct DataModel {
   int hum = 0;
@@ -53,7 +54,7 @@ void setup() {
 
 void loop() {
   unsigned long currMil = millis();
-  
+
   if (readButton() || currMil > next_update)
   {
     getData();
@@ -63,44 +64,59 @@ void loop() {
 
 void checkCon()
 {
-  radio.stopListening();
-  digitalWrite(LEDOUT, HIGH);
-  radio.write(&conMessage, sizeof(conMessage));
-  digitalWrite(LEDOUT, LOW);
-
-  char returnMessage[32] = "";
-
-  radio.startListening();
-  unsigned long millFrom = millis();
-  while (millis() - millFrom < 2000)
+  while (!is_connected)
   {
-    if (radio.available()) {
-      digitalWrite(LEDIN, HIGH);
-      radio.read(&returnMessage, sizeof(returnMessage));
-      digitalWrite(LEDIN, LOW);
-      break;
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(F("Connecting..."));
+
+    radio.stopListening();
+    digitalWrite(LEDOUT, HIGH);
+    radio.write(&conMessage, sizeof(conMessage));
+    digitalWrite(LEDOUT, LOW);
+
+    char returnMessage[32] = "";
+
+    radio.startListening();
+    unsigned long millFrom = millis();
+    while (millis() - millFrom < 2000)
+    {
+      if (radio.available()) {
+        digitalWrite(LEDIN, HIGH);
+        radio.read(&returnMessage, sizeof(returnMessage));
+        digitalWrite(LEDIN, LOW);
+        is_connected = true;
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print(F("Connected!"));
+        break;
+      }
+      else
+      {
+        is_connected = false;
+      }
     }
-  }
 
-  if (strcmp(returnMessage, "GOT") == 0)
-  {
-    digitalWrite(LEDOUT, HIGH);
-    digitalWrite(LEDIN, HIGH);
-    delay(200);
-    digitalWrite(LEDOUT, LOW);
-    digitalWrite(LEDIN, LOW);
-    delay(200);
-    digitalWrite(LEDOUT, HIGH);
-    digitalWrite(LEDIN, HIGH);
-    delay(200);
-    digitalWrite(LEDOUT, LOW);
-    digitalWrite(LEDIN, LOW);
-    delay(200);
-    digitalWrite(LEDOUT, HIGH);
-    digitalWrite(LEDIN, HIGH);
-    delay(200);
-    digitalWrite(LEDOUT, LOW);
-    digitalWrite(LEDIN, LOW);
+    if (is_connected && strcmp(returnMessage, "GOT") == 0)
+    {
+      digitalWrite(LEDOUT, HIGH);
+      digitalWrite(LEDIN, HIGH);
+      delay(200);
+      digitalWrite(LEDOUT, LOW);
+      digitalWrite(LEDIN, LOW);
+      delay(200);
+      digitalWrite(LEDOUT, HIGH);
+      digitalWrite(LEDIN, HIGH);
+      delay(200);
+      digitalWrite(LEDOUT, LOW);
+      digitalWrite(LEDIN, LOW);
+      delay(200);
+      digitalWrite(LEDOUT, HIGH);
+      digitalWrite(LEDIN, HIGH);
+      delay(200);
+      digitalWrite(LEDOUT, LOW);
+      digitalWrite(LEDIN, LOW);
+    }
   }
 }
 
@@ -119,19 +135,36 @@ void getData()
       digitalWrite(LEDIN, HIGH);
       radio.read(&model, sizeof(DataModel));
       digitalWrite(LEDIN, LOW);
+      is_connected = true;
       break;
+    }
+    else
+    {
+      is_connected = false;
     }
   }
 
-  lcd.setCursor(0, 0);
-  lcd.print(F("Temp: "));
-  lcd.print(model.temp);
-  lcd.print(F("c   "));
+  if (is_connected)
+  {
+    lcd.setCursor(0, 0);
+    lcd.print(F("Temp: "));
+    lcd.print(model.temp);
+    lcd.print(F("c   "));
 
-  lcd.setCursor(0, 1);
-  lcd.print(F("Hum: "));
-  lcd.print(model.hum);
-  lcd.print(F("%   "));
+    lcd.setCursor(0, 1);
+    lcd.print(F("Hum: "));
+    lcd.print(model.hum);
+    lcd.print(F("%   "));
+  }
+  else
+  {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(F("Disconnect!"));
+    delay(2000);
+    checkCon();    
+  }
+
 
   delay(100);
 }
