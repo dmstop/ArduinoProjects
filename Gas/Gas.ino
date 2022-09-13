@@ -5,12 +5,17 @@ const int led = 9;
 const int btn = 3;
 const int sound = 8;
 
+const int soundDuration = 20000;
+
 bool ledState = false;
 
 volatile bool stopFlag = false;
 
+unsigned long lastMil;
+
 void setup() {
   pinMode(sensor, INPUT);
+  pinMode(btn, INPUT);
 
   pinMode(led, OUTPUT);
   pinMode(sound, OUTPUT);
@@ -23,6 +28,8 @@ void loop() {
 
   attachInterrupt(digitalPinToInterrupt(btn), stopV, RISING);
 
+  lastMil = millis();
+
   while (!stopFlag)
   {
     ledState = !ledState;
@@ -31,10 +38,16 @@ void loop() {
     makeSound();
 
     delay(200);
+
+    if (millis() - lastMil > soundDuration)
+    {
+      stopFlag = true;
+    }
   }
 
   digitalWrite(led, LOW);
-  
+
+  detachInterrupt(digitalPinToInterrupt(btn));
   ledState = false;
   stopFlag = false;
 }
